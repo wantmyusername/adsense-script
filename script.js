@@ -1,146 +1,245 @@
-document.addEventListener("DOMContentLoaded", function () {
-    const urlHash = window.location.hash;
-    const hashParams = new URLSearchParams(urlHash.substr(1)); // Elimina el símbolo # del hash
+<script>
+// Creamos un nuevo elemento div para el fondo del tpGateway.
+var tpGatewayBackground = document.createElement('div');
+tpGatewayBackground.setAttribute('id', 'tp-gateway-background');
+tpGatewayBackground.setAttribute('class', 'tp-gateway-background');
 
-    const overlay = document.createElement("div");
-    const modal = document.createElement("div");
-    const expanderButton = document.createElement("button");
+// Creamos un nuevo elemento div para el oscurecimiento del tpGateway.
+var tpGatewayBackgroundBlackout = document.createElement('div');
+tpGatewayBackgroundBlackout.setAttribute('id', 'tp-gateway-background-blackout');
+tpGatewayBackgroundBlackout.setAttribute('class', 'tp-gateway-background-blackout');
 
-    overlay.id = "overlay";
-    modal.id = "modal";
-    expanderButton.id = "expander";
-    expanderButton.textContent = "Expander para leer el artículo completo";
-    expanderButton.addEventListener("click", function () {
-        window.location.href = "./#modal=off";
-    });
+// Creamos un nuevo elemento div para el tpGateway principal.
+var tpGateway = document.createElement('div');
+tpGateway.setAttribute('id', 'tp-gateway');
+tpGateway.setAttribute('class', 'tp-gateway');
 
-    document.body.appendChild(overlay);
-    document.body.appendChild(modal);
-    modal.appendChild(expanderButton);
+// Obtenemos la URL actual y agregamos el parámetro 'expand_article' con valor '1'.
+gatewayURL = new URL(window.location.href);
+gatewayURL.searchParams.append('expand_article', '1');
 
-    const styles = `
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: Arial, sans-serif;
+// Creamos un nuevo elemento 'a' para el botón del tpGateway.
+var tpGatewayButton = document.createElement('a');
+var customText = document.createTextNode('Expandir para mostrar el artículo completo');
+tpGatewayButton.appendChild(customText);
+tpGatewayButton.setAttribute('id', 'tp-gateway-button');
+tpGatewayButton.setAttribute('class', 'tp-gateway-button');
+tpGatewayButton.setAttribute('href', gatewayURL.href);
+
+// Añadimos el botón del tpGateway al elemento tpGateway.
+tpGateway.appendChild(tpGatewayButton);
+
+// Definimos una variable global para habilitar el uso del tpGwjsonpg.
+window.tpGwjsonpg = true;
+
+// Agregamos un evento onscroll que mostrará el tpGateway cuando se haga scroll en la página.
+window.onscroll = function() {
+  if (window.scrollY >= Math.max(0, (800 - 100)) && typeof __tp_show_gateway !== 'undefined') {
+    console.log("X");
+    __tp_show_gateway();
+  }
+};
+
+// Agregamos un evento onload que insertará los elementos del tpGateway al comienzo del body una vez cargada la página.
+window.onload = function() {
+  document.body.insertBefore(tpGateway, document.body.firstChild);
+  document.body.insertBefore(tpGatewayBackground, document.body.firstChild);
+  document.body.insertBefore(tpGatewayBackgroundBlackout, document.body.firstChild);
+};
+
+var versionPixelFired = false;
+let isInit = false;
+let isGwd = false;
+function __tp_init_gateway() {
+    isInit = true;
+    firepx();
+    setInitCookie();
+    checkGwd();
+}
+function setInitCookie() {
+    let expireTime = (new Date(Date.now() + 300000)).toUTCString();
+    let version = -1;
+    if (typeof window.tpgwb !== 'undefined' && typeof window.tpgwb.version !== 'undefined' && !isNaN(window.tpgwb.version)) {
+        version = parseInt(window.tpgwb.version);
     }
-
-    .content {
-      width: 80%;
-      margin: 0 auto;
-      padding: 20px;
+    let intCookie = "tpgwv=" + version + "; expires=" + expireTime + "; path=/";
+    document.cookie = intCookie;
+}
+function checkGwd() {
+    if (window.hideGatewayButton === true) {
+        isGwd = true;
+        return
     }
-
-    #overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(0deg, rgb(2 0 36) 0.75%, rgb(0 0 0 / 0%) 100%);
-      z-index: 1000;
+    if (typeof window.tpgwb !== 'undefined' && typeof window.tpgwb.version !== 'undefined' && (window.tpgwb.version === -1 || isNaN(window.tpgwb.version))) {
+        isGwd = true;
+        return
     }
-
-    #modal {
-      display: none;
-      position: fixed;
-      top: 90%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 1001;
-      width: 300px;
+    let minPageLength = window.innerHeight * 2.5;
+    if (getPageLength() <= minPageLength) {
+        isGwd = true;
+        return
     }
-
-    #expander {
-      padding: 10px 20px;
-      cursor: pointer;
-      background-color: #2470ce !important;
-      border: 2px solid#14509c !important;
-      border-radius: 5px;
-      color: #fff!important;
-      display: inline-block;
-      text-align: center;
-      font-size: 16px;
-      font-weight: 700;
+    let seenVignette = getCookie("tpvignetteviewed");
+    let confirmedShowMore = getCookie("tpgwcc");
+    if (seenVignette !== "" || confirmedShowMore !== "") {
+        isGwd = true;
+        return
     }
-    `;
-
-    const styleSheet = document.createElement("style");
-    styleSheet.type = "text/css";
-    styleSheet.innerText = styles;
-    document.head.appendChild(styleSheet);
-
-    const maxScrollValue = 800 - 100;
-    let isModalVisible = false;
-
-    function scrollHandler() {
-        if (!isModalVisible && window.scrollY >= maxScrollValue) {
-            overlay.style.display = "block";
-            modal.style.display = "block";
-            document.body.style.overflow = "hidden";
-            isModalVisible = true;
+}
+function __tp_show_gateway() {
+    if (isInit !== true) {
+        __tp_init_gateway();
+    }
+    if (isGwd === false) {
+        let triggerLength = 800;
+        if (typeof window.tpcustscry !== 'undefined') {
+            triggerLength = window.tpcustscry;
+        }
+        let gateway = document.getElementById("tp-gateway");
+        let gatewaybg = document.getElementById("tp-gateway-background");
+        if (!gateway || !gatewaybg) {
+            return;
+        }
+        scrollEventThrottle((scrollPosition,prevScrollPos)=>{
+            let head = 100;
+            let buffer = 2;
+            let tail = 50;
+            let headStart = triggerLength - head;
+            let tailStart = triggerLength;
+            let tailEnd = tailStart + tail;
+            let bufferEnd = tailEnd + buffer;
+            function progress(current, start, stop, max) {
+                let p = current - start;
+                let d = stop - start;
+                return Math.min(Math.max((p / d) * max, 0), max)
+            }
+            if (scrollPosition < headStart) {
+                gateway.style.display = "none";
+                gatewaybg.style.display = "none";
+            } else {
+                gateway.style.display = "flex";
+                gatewaybg.style.display = "block";
+            }
+            if (scrollPosition >= headStart && scrollPosition <= bufferEnd) {
+                gatewaybg.style.opacity = progress(scrollPosition, headStart, tailStart, 0.75);
+            }
+            if (scrollPosition > bufferEnd) {
+                if ('scrollBehavior'in document.documentElement.style) {
+                    window.scrollTo({
+                        top: tailEnd,
+                        left: 0,
+                        behavior: 'instant',
+                    });
+                } else {
+                    window.scrollTo(0, tailEnd);
+                }
+            }
+        }
+        );
+        let gwClickBtn = document.getElementById("tp-gateway-button");
+        if (gwClickBtn) {
+            gwClickBtn.onclick = function() {
+                let expireTime = (new Date(Date.now() + 300000)).toUTCString();
+                let intCookie = "tpgwcc=1; expires=" + expireTime + "; path=" + window.location.pathname;
+                document.cookie = intCookie;
+            }
         }
     }
-
-    if (hashParams.get("modal") !== "off") {
-        window.addEventListener("scroll", scrollHandler);
-
-        expanderButton.addEventListener("click", function () {
-            overlay.style.display = "none";
-            modal.style.display = "none";
-            document.body.style.overflow = "auto";
-            isModalVisible = false;
-        });
-    } else {
-        overlay.style.display = "none";
-        modal.style.display = "none";
+}
+;function firepx() {
+    if (!versionPixelFired && typeof window.tpgwb !== 'undefined' && typeof window.tpgwb.version !== 'undefined') {
+        let gatewayVersion = -1;
+        if (!isNaN(window.tpgwb.version)) {
+            gatewayVersion = parseInt(window.tpgwb.version);
+        }
+        __tp.bit.AddAndFire(window["_tpaq"]["page_view_id"], [(new __tpDotData('show_more_version',gatewayVersion))]);
+        versionPixelFired = true;
     }
-
-    overlay.addEventListener("mousewheel", function (event) {
-        event.preventDefault();
-    });
-
-    overlay.addEventListener("touchstart", function (event) {
-        event.preventDefault();
-    });
-
-    expanderButton.addEventListener("mousewheel", function (event) {
-        event.preventDefault();
-    });
-
-    window.addEventListener("hashchange", function () {
-        const newHash = window.location.hash;
-        const newHashParams = new URLSearchParams(newHash.substr(1));
-
-        if (newHashParams.get("modal") === "off") {
-            overlay.style.display = "none";
-            modal.style.display = "none";
-            window.removeEventListener("scroll", scrollHandler);
+}
+window.addEventListener("beforeunload", function(e) {
+    sessionStorage.setItem("position", window.scrollY);
+});
+function scrollEventThrottle(fn) {
+    let scrollPosition = 0;
+    let ticking = false;
+    window.addEventListener("scroll", function() {
+        let prevScrollPos = scrollPosition;
+        scrollPosition = window.scrollY;
+        if (!ticking) {
+            window.requestAnimationFrame(function() {
+                fn(scrollPosition, prevScrollPos);
+                ticking = false;
+            });
+            ticking = true;
         }
     });
-
-    
-
-// Event listener para volver al inicio cuando se pasa la mitad de la página
-window.addEventListener("scroll", function () {
-    if (hashParams.get("modal") !== "off" && window.scrollY > maxScrollValue) {
-        // Hacer scroll hacia arriba de manera suave solo si el modal no está desactivado y se ha pasado el umbral
-        window.scrollTo({
-            top: 0,
-            behavior: "auto"
-        });
+}
+function getCookie(cname) {
+    let name = cname + "=";
+    let decodedCookie = decodeURIComponent(document.cookie);
+    let ca = decodedCookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) == ' ') {
+            c = c.substring(1);
+        }
+        if (c.indexOf(name) == 0) {
+            return c.substring(name.length, c.length);
+        }
     }
-});
+    return "";
+}
+function getPageLength() {
+    return Math.max(document.body.scrollHeight, document.body.offsetHeight, document.documentElement.clientHeight, document.documentElement.scrollHeight, document.documentElement.offsetHeight);
+}
+</script>
+<style>
+    .tp-gateway {
+    display: none;
+    bottom: 20vh;
+    left: 0;
+    -webkit-box-align: center;
+    align-items: center;
+    box-sizing: border-box;
+    flex-direction: column;
+    margin: 0 auto;
+    padding: 20px;
+    position: fixed;
+    text-align: left;
+    width: 100%;
+    z-index: 99000;
+    height: auto;
+    opacity: 1;
+}
+.tp-gateway-background {
+    display: none;
+    position: fixed;
+    top: 0;
+    z-index: 99000;
+    height: 100vh;
+    width: 100vw;
+    pointer-events: none;
+    background: linear-gradient(transparent,#000);
+    opacity: 0;
+}
 
 
-    const scrollButtons = document.querySelectorAll(".scroll-button");
-    for (const scrollButton of scrollButtons) {
-        scrollButton.addEventListener("click", function () {
-            overlay.style.display = "block";
-            modal.style.display = "block";
-            document.body.style.overflow = "hidden";
-            isModalVisible = true;
-        });
-    }
-});
+.tp-gateway-button {
+    background-color: #2470ce;
+    border: 2px solid#14509c;
+    border-radius: 30px;
+    box-shadow: 0 4px 10px rgb(0 0 0/16%);
+    color: #fff!important;
+    display: inline-block;
+    text-align: center;
+    font-size: 16px;
+    text-rendering: optimizeLegibility;
+    font-family: -apple-system,arial,helvetica;
+    font-weight: 700;
+    line-height: 1.6;
+    margin: 0 auto;
+    min-width: 230px;
+    padding: 14px 30px;
+    text-decoration: none;
+}
+</style>
