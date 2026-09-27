@@ -35,7 +35,6 @@ window.tpGwjsonpg = true;
 // Agregamos un evento onscroll que mostrará el tpGateway cuando se haga scroll en la página.
 window.onscroll = function() {
   if (window.scrollY >= Math.max(0, (800 - 100)) && typeof __tp_show_gateway !== 'undefined') {
-    console.log("X");
     __tp_show_gateway();
   }
 };
